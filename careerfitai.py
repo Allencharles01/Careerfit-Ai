@@ -62,11 +62,17 @@ def query_local_llm(user_prompt):
     payload = {
         "model": MODEL_NAME,
         "prompt": user_prompt,
-        "stream": False
+        "stream": False,   # Keep False unless you rewrite for streaming
+        "options": {
+            "temperature": 0.2,
+            "num_predict": 200,
+            "num_ctx": 2048,
+            "top_p": 0.9
+        }
     }
 
     try:
-        r = requests.post(AI_ENDPOINT, json=payload, timeout=600)
+        r = requests.post(AI_ENDPOINT, json=payload, timeout=120)
         r.raise_for_status()
         data = r.json()
 
@@ -76,7 +82,7 @@ def query_local_llm(user_prompt):
         return "⚠️ Cannot connect to Ollama. Make sure `ollama serve` is running."
 
     except requests.exceptions.Timeout:
-        return "⚠️ Model took too long to respond. Try reducing resume/JD size."
+        return "⚠️ AI took too long to respond."
 
     except Exception as e:
         return f"Unexpected API Error: {str(e)}"
@@ -92,32 +98,25 @@ def run_compatibility_check(jd_text, raw_resume_text, resume_pdf):
         return "### ⚠️ I need both the Job Description and a Resume."
 
     full_prompt = f"""
-Act as a Senior Recruiter. Analyze this Resume vs JD. 
-Use ONLY this 5-point structure. Use 🔹 for bullets. No extra talking.
+Act as an ATS recruiter.
 
-1. 🚀 **Compatibility Score**: [X]%
-🔹 (One line verdict)
+Analyze the resume against the job description.
 
-2. 🎯 **Things to focus on**:
-🔹 (Core gaps)
+Return ONLY:
 
-3. 💡 **Skills to Add**:
-🔹 (Missing tools from JD)
+1. Compatibility Score (%)
+2. Missing Skills
+3. Resume Improvements
+4. ATS Keywords
+5. One Project (Name + Tech Stack + Idea)
 
-4. 🛠️ **Resume Fix**:
-🔹 Add these keywords: [Exact keywords]
-🔹 If it’s not written, ATS assumes you don’t know it.
+Be concise.
 
-5. 🏗️ **Projects**:
-🔹 **Project**: [Name]
-🔹 **Tech Stack**: [Tools]
-🔹 **Idea**: [1 sentence]
+Job Description:
+{jd_text[:1000]}
 
-JD:
-{jd_text[:2000]}
-
-RESUME:
-{final_resume[:3000]}
+Resume:
+{final_resume[:1500]}
 """
 
     return query_local_llm(full_prompt)
