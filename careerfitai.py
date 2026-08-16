@@ -665,4 +665,4 @@ with gr.Blocks(title="CareerFit AI") as demo:
 
 
 if __name__ == "__main__":
-    demo.launch(css=theme_css)
+    demo.launch()
